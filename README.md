@@ -12,3 +12,5 @@ Coreos kubernetes cluster with bootkube
 #### Caveats
 
 - etcd runs as single node on controller-1
+
+[1]:https://github.com/kubernetes-incubator/bootkube/releases/download/v0.13.0/bootkube.tar.gz
