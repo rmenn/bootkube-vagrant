@@ -1,0 +1,6 @@
+*.log
+*.zip
+bootkube
+cluster/*
+cluster.zip
+.vagrant/*
