@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOOTKUBE_VERSION="0.13.0"
+GLOG_v=${GLOG_v:-1}
+
+if [ $1 == "clean"]; then
+  rm -rf bin/
+  rm -rf cluster/
+  rm bootkube.tar.gz
+  exit(0)
+fi
+
+if [ ! -d "bin" ]; then
+  echo "Downloading bootkube"
+  wget https://github.com/kubernetes-incubator/bootkube/releases/download/v${BOOTKUBE_VERSION}/bootkube.tar.gz
+  tar -xvzf bootkube.tar.gz
+fi
+
+un="$(uname)"
+local_os="linux"
+if [ ${un} == 'Darwin' ]; then
+    local_os="darwin"
+fi
+
+CALICO_NETWORK_POLICY=${CALICO_NETWORK_POLICY:-false}
+if [ ${CALICO_NETWORK_POLICY} = "true" ]; then
+    echo "WARNING: THIS IS EXPERIMENTAL SUPPORT FOR NETWORK POLICY"
+    cnp_render_flags="--network-provider=experimental-calico"
+else
+    cnp_render_flags=""
+fi
+
+# Render assets
+if [ ! -d "cluster" ]; then
+  bin/${local_os}/bootkube render --asset-dir cluster --api-servers=https://controller-1.coreos.local:6443 --etcd-servers=https://controller-1.coreos.local:2379
+  zip -r cluster.zip cluster/
+fi
+
+# Start the VM
+vagrant up
+
+
+echo
+echo "please run - sudo echo \"172.17.4.100 controller-1.coreos.local\" > /etc/hosts"
+echo "Bootstrap complete. Access your kubernetes cluster using:"
+echo "kubectl --kubeconfig=cluster/auth/kubeconfig get nodes"
+echo
