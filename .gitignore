@@ -1,6 +1,8 @@
 *.log
 *.zip
 bootkube
+bootkube.tar.gz
+bin/*
 cluster/*
 cluster.zip
 .vagrant/*
