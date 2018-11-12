@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BOOTKUBE_VERSION="0.13.0"
+BOOTKUBE_VERSION="0.14.0"
 GLOG_v=${GLOG_v:-1}
 
-if [ $1 == "clean"]; then
-  rm -rf bin/
-  rm -rf cluster/
-  rm bootkube.tar.gz
-  exit(0)
-fi
+#if [ "${1-default}" == "clean" ]; then
+#  rm -rf bin/
+#  rm -rf cluster/
+#  rm bootkube.tar.gz
+#  exit 0
+#fi
 
 if [ ! -d "bin" ]; then
   echo "Downloading bootkube"
@@ -38,7 +38,7 @@ if [ ! -d "cluster" ]; then
 fi
 
 # Start the VM
-vagrant up
+# vagrant up
 
 
 echo

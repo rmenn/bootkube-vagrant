@@ -25,11 +25,59 @@ coreos:
             Environment="ETCD_PEER_CERT_FILE=/etc/ssl/certs/etcd/peer.crt"
             Environment="ETCD_PEER_KEY_FILE=/etc/ssl/certs/etcd/peer.key"
             Environment="ETCD_PEER_CLIENT_CERT_AUTH=true"
+    - name: crio-install.service
+      command: start
+      content: |
+        [Unit]
+        Description=CRIO install via rkt
+        After=network-online.target
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/rkt run \
+          --trust-keys-from-https \
+          --volume host,kind=host,source=/ \
+          --mount volume=host,target=/host \
+          quay.io/rmenn/crio:setup \
+          --exec=/crio/install.sh
+        RemainAfterExit=yes
+        [Install]
+        WantedBy=multi-user.target
+    - name: crio.service
+      command: start
+      content: |
+        [Unit]
+        Description=Open Container Initiative Daemon
+        Documentation=https://github.com/kubernetes-incubator/cri-o
+        After=crio-install.service
+        [Service]
+        Type=notify
+        Environment=GOTRACEBACK=crash
+        Environment=LD_LIBRARY_PATH=:/opt/lib64
+        Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/opt/bin
+        ExecStart=/opt/bin/crio \
+          --runtime /usr/bin/runc \
+          --log /home/core/crio.log \
+          --log-level debug
+        ExecReload=/bin/kill -s HUP $MAINPID
+        TasksMax=infinity
+        LimitNOFILE=1048576
+        LimitNPROC=1048576
+        LimitCORE=infinity
+        OOMScoreAdjust=-999
+        TimeoutStartSec=0
+        Restart=on-abnormal
+
+        [Install]
+        WantedBy=multi-user.target
 
     - name: kubelet.service
       enable: true
       command: start
       content: |
+        [Unit]
+        Description=Start bootkube to launch a self-hosted cluster
+        Requires=crio.service
+        After=crio.service
         [Service]
         EnvironmentFile=/etc/environment
         Environment=KUBELET_IMAGE_URL=quay.io/coreos/hyperkube
@@ -65,7 +113,11 @@ coreos:
           --register-with-taints=node-role.kubernetes.io/master=:NoSchedule \
           --cluster_dns=10.3.0.10 \
           --cluster_domain=cluster.local \
-          --rotate-certificates
+          --rotate-certificates \
+          --container-runtime=remote \
+          --container-runtime-endpoint=unix:///var/run/crio/crio.sock \
+          --image-service-endpoint=unix:///var/run/crio/crio.sock \
+          --runtime-request-timeout=10m
 
         ExecStop=-/usr/bin/rkt stop --uuid-file=/var/run/kubelet-pod.uuid
         Restart=always
